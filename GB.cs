@@ -24,7 +24,8 @@ namespace Winform_PSXEmu
  to $133 are read but this time they are compared with
  a table in the internal rom.
  If any byte fails to compare, then the GameBoy stops
- comparing bytes and simply halts all operations.*/
+ comparing bytes and simply halts all operations.
+*/
     class GB
     {
         Byte[] RAM = new Byte[65535];
@@ -42,6 +43,38 @@ namespace Winform_PSXEmu
         UInt16 PC = 0x0000;
         int count = 0;
 
+        public void StartEmu()
+        {
+
+        }
+
+        public void PauseEmu()
+        {
+
+        }
+
+        public void StopEmu()
+        {
+
+        }
+
+        public void ResetEmu()
+        {
+
+        }
+
+        private void MainLogic()
+        {
+            for (int i = 0; i < 1;)
+            {
+                //if sleep = false
+                //ReadInst
+                //DrawScreen
+                //PlaySound
+                //if sleep = true
+                //thread sleep
+            }
+        }
         public void ReadBIOS(string biosLocation)
         {
             BinaryReader bios = new BinaryReader(File.Open(biosLocation, FileMode.Open));
@@ -81,6 +114,8 @@ namespace Winform_PSXEmu
             //0XA8 is the start of the scrolling nintendo logo, 0xD7 is the end
         }
 
+        //the switch case is just to ensure all the algorithm work, well, works.
+        //TODO: Replace with proper bit checking to simplify code
         private void CPUReadInst(byte[] instBytes)
         {
             UInt16 MemLoc = 0xFF00;
@@ -90,6 +125,10 @@ namespace Winform_PSXEmu
             byte check = 0;
             switch(instBytes[0])
             {
+                case 0x05:
+                    mnemonic += string.Format("WIP DEC B[{0}]", B.ToString("X2"));
+                    PC += 1;
+                    break;
                 case 0x06:
                     mnemonic += "LD B[" + B.ToString("X2") + "],d8[" + instBytes[1].ToString("X2") + "]";
                     B = instBytes[1];
@@ -116,6 +155,11 @@ namespace Winform_PSXEmu
                     E = instBytes[1];
                     D = instBytes[2];
                     PC += 3;
+                    break;
+                case 0x17:
+                    mnemonic += string.Format("RLA[{0}]", A.ToString("X2"));
+                    A = RL(A);
+                    PC += 1;
                     break;
                 case 0x1A:
                     mnemonic += "LD A[" + A.ToString("X2") + "],(DE[" + D.ToString("X2") + E.ToString("X2") + "])";
@@ -181,18 +225,26 @@ namespace Winform_PSXEmu
                     PC++;
                     break;
                 case 0xAF:
+                    //TODO: Proper XOR
                     mnemonic += "XOR A";
                     A = 0x0;
                     PC++;
+                    break;
+                case 0xC1:
+                    mnemonic += string.Format("POP BC[{0},{1}]", B.ToString("X2"), C.ToString("X2"));
+                    B = (byte)(SP >> 8);
+                    C = (byte)(SP);
+                    SP += 2;
+                    PC += 1;
                     break;
                 case 0xC3:
                     mnemonic +=  "WIP JP a16";
                     break;
                 case 0xC5:
-                    mnemonic += "PUSH BC ";
+                    mnemonic += "PUSH BC";
                     Reg16 = RegD16(B, C);
                     SP = Reg16;
-                    SP += 2;
+                    SP -= 2;
                     PC++;
                     break;
                 case 0xCB:
@@ -245,24 +297,15 @@ namespace Winform_PSXEmu
                 switch (instBytes[1])
                 {
                     case 0x11:
-                        mnemonic += "WIP RL C";
+                        mnemonic += string.Format("RL C[{0}]", C.ToString("X2"));
+                        C = RL(C);
+                        PC += 2;
                         break;
                     case 0x7C:
                         mnemonic += "BIT 7, H[" + H.ToString("X2") + "]";
-                        check = (byte)(H >> 7);
-                        switch (check)
-                        {
-                            case 0:
-                                F = (byte)(BitToggle(F, 7, 1));
-                                break;
-
-                            case 1:
-                                F = (byte)(BitToggle(F, 7, 0));
-                                break;
-                        }
+                        H = BIT(7, H);
                         PC += 2;
                         break;
-
                     default:
                         Console.WriteLine("Undefined byte in switch for CB prefix in CPU:" + instBytes[1].ToString("X2") + " at location:" + PC.ToString("X4"));
                         PC += 2;
@@ -285,18 +328,59 @@ namespace Winform_PSXEmu
         {
 
         }
-        
-        public static int BitToggle(byte n, int p, int b) //n: original number, p: position of bit, b: bit value
+
+        #region RegInstMethods
+        private Byte RL(Byte Reg)
         {
-            int mask = 1 << p;
-            return (n & ~mask) |
-                   ((b << p) & mask);
+            byte oldMSB = (byte)(Reg >> 7); // grab old MSB of reg
+            byte newLSB = (byte)(F << 3); //grab LSB of current carry flag
+            newLSB = (byte)(newLSB >> 7); //step 2
+            Reg = (byte)(Reg << 1); //rotate left everything over 1
+            Reg = BitToggle(Reg, 0, newLSB); //add last bit
+            if (Reg == 0x00) //if reg = 0, toggle zero flag
+            {
+                BitToggle(F, 7, 1);
+            }
+            return Reg;
+        }
+        
+        private Byte BIT(Byte loc, Byte reg)
+        {
+            byte check = (byte)(reg << loc - 1);
+            check = (byte)(reg >> 7);
+            check = (byte)(~check);
+            return BitToggle(reg, loc, check);
         }
 
-        public static UInt16 RegD16(byte A, byte B)
+        private Byte DEC(Byte reg)
+        {
+            //TODO: H - Set if no borrow from bit 4. ????
+            BitToggle(F, 6, 1); //set N
+            if (reg == 0x00) //if reg = 0, toggle zero flag
+            {
+                BitToggle(F, 7, 1);
+            }
+            return reg;
+        }
+        #endregion
+        #region GeneralBitOps
+        private Byte BitToggle(byte n, int p, int b) //n: original number, p: position of bit, b: bit value
+        {
+            //F, in order of the toggle option
+            //7 = Zero Flag (z)
+            //6 = Subtract Flag (n)
+            //5 = Half-Carry (h)
+            //4 = Carry (c)
+            //rest of bits unused
+            byte mask = (byte)(1 << p);
+            return (byte)((n & ~mask) | ((b << p) & mask));
+        }
+
+        private UInt16 RegD16(byte A, byte B)
         {
             return (UInt16)(A << 8 | B);
         }
+        #endregion
     }
 }
 
