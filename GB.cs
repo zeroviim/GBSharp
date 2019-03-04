@@ -155,33 +155,28 @@ namespace Winform_PSXEmu
             {
                 case 0x05:
                     mnemonic += string.Format("WIP DEC B[{0}]", B.ToString("X2"));
+					B = DEC(B);
                     PC += 1;
                     break;
                 case 0x06:
-                    mnemonic += "LD B[" + B.ToString("X2") + "],d8[" + instBytes[1].ToString("X2") + "]";
-                    B = instBytes[1];
+					mnemonic += string.Format("LD B[{0}],d8[{1}]", B.ToString("X2"), instBytes[1].ToString("X2"));
+					B = LD8(B,instBytes[1]);
                     PC += 2;
                     break;
                 case 0x0C:
-                    mnemonic += "INC C[" + C.ToString("X2") + "]";
-                    C++;
-                    check = (byte)(F << 1);
-                    check = (byte)(check >> 7);
-                    if (check == 1)
-                    {
-                        F = (byte)(BitToggle(F, 6, 0));
-                    }
+					mnemonic += string.Format("INC C[{0}]", C.ToString("X2"));
+					C = INC(C);
                     PC++;
                     break;
                 case 0x0E:
-                    mnemonic += "LD C, d8:[" + instBytes[1].ToString("X2") + "]";
-                    C = (byte)(instBytes[1]);
+					mnemonic += string.Format("LD C[{0}], d8[{1}]", C.ToString("X2"),instBytes[1].ToString("X2"));
+					C = LD(C, instBytes[1]);
                     PC += 2;
                     break;
                 case 0x11:
-                    mnemonic += "LD DE[" + D.ToString("X2") + E.ToString("X2") + "]," + instBytes[1].ToString("X2") + instBytes[2].ToString("X2");
-                    E = instBytes[1];
-                    D = instBytes[2];
+					mnemonic += string.Format("LD DE[{0},{1}],{2},{3}", D.ToString("X2"), E.ToString("X2"), instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
+					E = LD(E,instBytes[1]);
+					D = LD(D,instBytes[2]);
                     PC += 3;
                     break;
                 case 0x17:
@@ -190,13 +185,16 @@ namespace Winform_PSXEmu
                     PC += 1;
                     break;
                 case 0x1A:
-                    mnemonic += "LD A[" + A.ToString("X2") + "],(DE[" + D.ToString("X2") + E.ToString("X2") + "])";
+					mnemonic += string.Format("LD A[{0}], (DE[{1},{2}])", A.ToString("X2"), D.ToString("X2"), E.ToString("X2"));
                     Reg16 = RegD16(D, E);
-                    RAM[Reg16] = A;
+					LD8RAM(A, Reg16);
                     PC++;
                     break;
                 case 0x20:
-                    mnemonic += "JR NZ, [" + instBytes[1].ToString("X4") + "]";
+					mnemonic += string.Format("JR NZ, [{1},{2}]", instBytes[].ToString("X2"), instBytes[2].ToString("X2"))
+					//TODO: Did this work originally??? Review Logging...
+                    //mnemonic += "JR NZ, [" + instBytes[1].ToString("X4") + "]";
+					//TODO: debating shoving this in a method of its own or not, do want to but may need to work more in jump instructions before I do
                     check = (byte)(F >> 7);
                     switch(check)
                     {
@@ -207,14 +205,14 @@ namespace Winform_PSXEmu
                         case 1:
                             SByte signedByte = (SByte)instBytes[1];
                             PC = (UInt16)(PC + 2 + signedByte);
-                            mnemonic += " True, jumping to: " + PC.ToString("X4");
+                            mnemonic += string.Format(" True, jumping to: {0}", PC.ToString("X4"));
                             break;
                     }
                     break;
                 case 0x21:
-                    mnemonic += "LD HL, d16[" + instBytes[1].ToString("X2") + " " + instBytes[2].ToString("X2") + "]";
-                    H = (byte)(instBytes[2]);
-                    L = (byte)(instBytes[1]);
+                    mnemonic += string.Format("LD HL[{0},{1}], d16[{2},{3}]", H.ToString("X2"), L.ToString("X2"), instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
+					H = LD8(H,instBytes[2]);
+					L = LD8(L,instBytes[1]);
                     PC += 3;
                     break;
                 case 0x26:
@@ -368,6 +366,24 @@ namespace Winform_PSXEmu
 		}
 		
         #region RegInstMethods
+		private Byte LD8(Byte Reg, Byte d8) 
+		{
+			return Reg = d8;
+		}
+		private void LD8RAM(Byte Reg, UInt16 Reg2)
+		{
+			RAM[Reg2] = Reg;
+		}
+		private Byte INC(Byte Reg)
+		{
+			check = (byte)(F << 1);
+            check = (byte)(check >> 7);
+            if (check == 1)
+            {
+                F = (byte)(BitToggle(F, 6, 0));
+            }
+			return Reg++;
+		}
         private Byte RL(Byte Reg)
         {
             byte oldMSB = (byte)(Reg >> 7); // grab old MSB of reg
