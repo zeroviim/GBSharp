@@ -216,38 +216,39 @@ namespace Winform_PSXEmu
                     PC += 3;
                     break;
                 case 0x26:
-                    mnemonic += "LD H, d8[" + instBytes[1].ToString("X2") + "]";
-                    H = (byte)(instBytes[1]);
+					mnemonic += string.Format("LD H[{0}], d8[{1}]", H.ToString("X2"), instBytes[1].ToString("X2"));
+					H = LD8(H, instBytes[1]);
                     PC += 2; 
                     break;
                 case 0x31:
-                    mnemonic += "LD SP, d16[" + instBytes[1].ToString("X2") + "," + instBytes[2].ToString("X2")+"]";
-                    SP = (UInt16)(instBytes[2] << 8 | instBytes[1]);
+					mnemonic += string.Format("LD SP[{0}], d16[{1},{2}]", SP.ToString("X4"), instBytes[1].ToString("X2"),instBytes[1].ToString("X2"));
+					SP = RegD16(instBytes[2], instBytes[1])
                     PC += 3;
                     break;
                 case 0x32:
-                    mnemonic += "LD (HL-[" + H.ToString("X2") + L.ToString("X2")+ "]), " + "A:" + A.ToString("X2");
+					//TODO: Im tired, move this into its own method, somehow, maybe?.
+                    mnemonic += string.Format("LD (HL-[{0},{1}]), A[{2}]", H.ToString("X2"), L.ToString("X2"), A.ToString("X2"));
                     Reg16 = RegD16(H, L);
-                    RAM[Reg16] = A;
+					LD8RAM(A, Reg16)
                     Reg16--;
                     H = (byte)(Reg16 >> 8);
                     L = (byte)(Reg16);
-                    PC += 1;
+                    PC++;
                     break;
                 case 0x3E:
-                    mnemonic += "LD A, d8: " + instBytes[1].ToString("X2");
-                    A = (byte)instBytes[1];
+                    mnemonic += string.Format("LD A[{0}], d8[{1}]", A.ToString("X2"), instBytes[1].ToString("X2"));
+					A = LD8(A, instBytes[1]);
                     PC += 2;
                     break;
                 case 0x4F:
-                    mnemonic += "LD C[" + C.ToString("X2") + "],A[" + A.ToString("X2") + "]";
-                    C = A;
+                    mnemonic += string.Format("LD C[{0}], A[{1}]", C.ToString("X2"), A.ToString("X2"));
+					LD8(C,A);
                     PC++;
                     break;
                 case 0x77:
-                    mnemonic += "LD (HL[" + H.ToString("X2") + L.ToString("X2") + "]), A[" + A.ToString("X2") + "]";
+					mnemonic += string.Format("LD (HL[{0},{1}]), A[{2}]", H.ToString("X2"), L.ToString("X2"), A.ToString("X2"));
                     Reg16 = RegD16(H, L);
-                    RAM[Reg16] = A;
+					LD8RAM(A, Reg16);
                     PC++;
                     break;
                 case 0xAF:
