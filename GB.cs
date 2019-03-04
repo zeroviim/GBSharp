@@ -28,6 +28,7 @@ namespace Winform_PSXEmu
 */
     class GB
     {
+		//GB components
         Byte[] RAM = new Byte[65535];
         Byte A = 0x0;
         Byte B = 0x0;
@@ -41,26 +42,53 @@ namespace Winform_PSXEmu
 
         UInt16 SP = 0x0000;
         UInt16 PC = 0x0000;
+		//personal use instruction counter
         int count = 0;
-
+		
+		//class components
+		Task taskMainLogic;
+		bool loop = false;
+		
         public void StartEmu()
         {
-
+			MainLogicTask = new Task(()=> MainLogic());
+			if (MainLogicTask == TaskStatus.Running)
+			{
+				Loop = true;
+				return;
+			}
+			else
+			{
+				Loop = true;
+				MainLogicTask.Start();
+			}
         }
 
         public void PauseEmu()
         {
-
+			if (Loop == true)
+			{
+				Loop = false;
+			}
+			if (Loop == false)
+			{
+				Loop = true;
+			}
         }
 
         public void StopEmu()
         {
-
+			MainLogicTask.Stop();
+			Reinitialize();
+			MainLogicTask = new Task(()=> MainLogic());
+			MainLogicTask.Start();
         }
 
         public void ResetEmu()
         {
-
+			Loop = false;
+			MainLogicTask.Stop();
+			Reinitialize();
         }
 
         private void MainLogic()
@@ -328,7 +356,17 @@ namespace Winform_PSXEmu
         {
 
         }
-
+		
+		private void Reinitialize()
+		{
+			for (int i = 0; i < 65535; i++) 
+			{
+				RAM[i] = 0x00;
+			}
+			A,B,C,D,H,F,C,E,L = 0x00;
+			SP,PC = 0x0000;
+		}
+		
         #region RegInstMethods
         private Byte RL(Byte Reg)
         {
