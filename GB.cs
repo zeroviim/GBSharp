@@ -367,14 +367,30 @@ namespace Winform_PSXEmu
 		}
 		
         #region RegInstMethods
-		private Byte LD8(Byte Reg, Byte d8) 
-		{
-			return Reg = d8;
-		}
-		private void LD8RAM(Byte Reg, UInt16 Reg2)
-		{
-			RAM[Reg2] = Reg;
-		}
+		private Byte BIT(Byte loc, Byte reg)
+        {
+            byte check = (byte)(reg << loc - 1);
+            check = (byte)(reg >> 7);
+            check = (byte)(~check);
+            return BitToggle(reg, loc, check);
+        }
+
+        private Byte DEC(Byte reg)
+        {
+			if ((byte)(reg & 0x0F) != 0) //check if not borrowing from upper nybble to set H
+			{
+				BitToggle(F, 5, 1);
+			}
+			//TODO: Verify that H doesn't need to be reset if a carry does happen
+            reg--; //decrease reg
+            BitToggle(F, 6, 1); //set N
+            if (reg == 0x00) //if reg = 0, toggle zero flag
+            {
+                BitToggle(F, 7, 1);
+            }
+            return reg;
+        }
+		
 		private Byte INC(Byte Reg)
 		{
 			check = (byte)(F << 1);
@@ -385,6 +401,17 @@ namespace Winform_PSXEmu
             }
 			return Reg++;
 		}
+		
+		private Byte LD8(Byte Reg, Byte d8) 
+		{
+			return Reg = d8;
+		}
+		
+		private void LD8RAM(Byte Reg, UInt16 Reg2)
+		{
+			RAM[Reg2] = Reg;
+		}
+
         private Byte RL(Byte Reg)
         {
             byte oldMSB = (byte)(Reg >> 7); // grab old MSB of reg
@@ -399,27 +426,7 @@ namespace Winform_PSXEmu
             return Reg;
         }
         
-        private Byte BIT(Byte loc, Byte reg)
-        {
-            byte check = (byte)(reg << loc - 1);
-            check = (byte)(reg >> 7);
-            check = (byte)(~check);
-            return BitToggle(reg, loc, check);
-        }
 
-        private Byte DEC(Byte reg)
-        {
-            byte oldreg = reg; //storing current reg to compare for H flag
-            reg--; //decrease reg
-            //TODO: H - Set if no borrow from bit 4. ????
-            //check if bit 3 in number 2 is greater than bit3 in number 1?
-            BitToggle(F, 6, 1); //set N
-            if (reg == 0x00) //if reg = 0, toggle zero flag
-            {
-                BitToggle(F, 7, 1);
-            }
-            return reg;
-        }
         #endregion
         #region GeneralBitOps
         private Byte BitToggle(byte n, int p, int b) //n: original number, p: position of bit, b: bit value
