@@ -47,62 +47,105 @@ namespace Winform_PSXEmu
 		
 		//class components
 		Task taskMainLogic;
-		bool loop = false;
+		bool loopEmu = false;
+        bool stopEmu = false;
 		
         public void StartEmu()
         {
 			MainLogicTask = new Task(()=> MainLogic());
 			if (MainLogicTask == TaskStatus.Running)
 			{
-				Loop = true;
+				loopEmu = true;
 				return;
 			}
 			else
 			{
-				Loop = true;
+				loopEmu = true;
 				MainLogicTask.Start();
 			}
         }
 
         public void PauseEmu()
         {
-			if (Loop == true)
+			if (loopEmu == true)
 			{
-				Loop = false;
+				loopEmu = false;
 			}
-			if (Loop == false)
+			if (loopEmu == false)
 			{
-				Loop = true;
+				loopEmu = true;
 			}
-        }
-
-        public void StopEmu()
-        {
-			MainLogicTask.Stop();
-			Reinitialize();
-			MainLogicTask = new Task(()=> MainLogic());
-			MainLogicTask.Start();
         }
 
         public void ResetEmu()
         {
+            loopEmu = false;
+			MainLogicTask.Stop();
+			Reinitialize();
+			MainLogicTask = new Task(()=> MainLogic());
+			MainLogicTask.Start();
+            
+        }
+
+        public void StopEmu()
+        {
 			Loop = false;
+            stopEmu = true;
 			MainLogicTask.Stop();
 			Reinitialize();
         }
 
         private void MainLogic()
         {
+            //TODO: still need that timer control
+            //TODO: vet this out and make sure it works as the report objects need to be dropped in here
+            BinaryReader rom = new BinaryReader(File.Open(romLocation, FileMode.Open));
+            long romLength = rom.BaseStream.Length;
+            
             for (int i = 0; i < 1;)
             {
-                //if sleep = false
-                //ReadInst
-                //DrawScreen
-                //PlaySound
-                //if sleep = true
-                //thread sleep
+                if (loopEmu == true) 
+                {
+                    count++;
+                    byte[] romBytes;
+                    ReadROM(rom, out romBytes);
+                    Console.WriteLine("Count: " + count.ToString() + " | Status output: PC:" + PC.ToString("X2") + " | SP:" + SP.ToString("X2"));
+                    Console.WriteLine(string.Format("CPU Registers High: A:[{0}] | B:[{1}] | D:[{2}] | H:[{3}] | Low: F:[{4}] | C:[{5}] | E:[{6}] | L:[{7}]", 
+                                     A.ToString("X2"), B.ToString("X2"), D.ToString("X2"), H.ToString("X2"), 
+                                     F.ToString("X2"), C.ToString("X2"), E.ToString("X2"), L.ToString("X2")));
+                    Console.WriteLine(" ");
+                    CPUDecodeInst(biosBytes);
+                    //DrawScreen
+                    //PlaySound
+                }
+                else
+                {
+                    if (stopEmu == true)
+                    {
+                        rom.Close();
+                        return;
+                    }
+                    thread.sleep(10);
+                }
             }
         }
+
+        private void ReadROM(BinaryReader rom, out byte[] romBytes) 
+        {
+            rom.BaseStream.Position = PC;
+            if (romLength - PC < 3)
+            {
+                int len = (int)romLength - 3;
+                romBytes = new byte[len];
+                romBytes = rom.ReadBytes(len).ToArray();
+            }
+            else
+            {
+                romBytes = new byte[2];
+                romBytes = rom.ReadBytes(3).ToArray();
+            }
+        }
+
         public void ReadBIOS(string biosLocation)
         {
             BinaryReader bios = new BinaryReader(File.Open(biosLocation, FileMode.Open));
@@ -134,7 +177,7 @@ namespace Winform_PSXEmu
                                    + "|E:" + E.ToString("X2")
                                    + "|L:" + L.ToString("X2"));
                 Console.WriteLine(" ");
-                CPUReadInst(biosBytes);
+                CPUDecodeInst(biosBytes);
                 //this may be tied to an iprogress object later in order to see what is going on in slow motion on the form controlled by a timer later
                 //lsbx_BIOS.Items.Add(biosByte.ToString("x2").ToUpper());
             }
@@ -144,7 +187,7 @@ namespace Winform_PSXEmu
 
         //the switch case is just to ensure all the algorithm work, well, works.
         //TODO: Replace with proper bit checking to simplify code
-        private void CPUReadInst(byte[] instBytes)
+        private void CPUDecodeInst(byte[] instBytes)
         {
             UInt16 MemLoc = 0xFF00;
             UInt16 localPC = PC;
@@ -153,10 +196,25 @@ namespace Winform_PSXEmu
             byte check = 0;
             switch(instBytes[0])
             {
+				case 0x00:
+					mnemonic += "WIP NOP"
+					PC++;
+					break;
+				case 0x01:
+					mnemonic += string.Format("LD BC[{0},{1}], d16[{2},{3}]", L.ToString("X2"), D.ToString("X2"), instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
+					D = LD(D, instBytes[1]);
+					L = LD(L, instBytes[2]);
+					PC += 3;
+					break;
+				case 0x02:
+					mnemonic += string.Format("WIP LD (BC[{0},{1}),A{2}", B.ToString("X2"), C.ToString("X2"), A.ToString("X2"));
+					
+					PC++;
+					break;
                 case 0x05:
-                    mnemonic += string.Format("WIP DEC B[{0}]", B.ToString("X2"));
+                    mnemonic += string.Format("DEC B[{0}]", B.ToString("X2"));
                     B = DEC(B);
-                    PC += 1;
+                    PC++;
                     break;
                 case 0x06:
 					mnemonic += string.Format("LD B[{0}],d8[{1}]", B.ToString("X2"), instBytes[1].ToString("X2"));
@@ -174,7 +232,7 @@ namespace Winform_PSXEmu
                     PC += 2;
                     break;
                 case 0x11:
-					mnemonic += string.Format("LD DE[{0},{1}],{2},{3}", D.ToString("X2"), E.ToString("X2"), instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
+					mnemonic += string.Format("LD DE[{0},{1}], d16[{2},{3}]", D.ToString("X2"), E.ToString("X2"), instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
 					E = LD(E,instBytes[1]);
 					D = LD(D,instBytes[2]);
                     PC += 3;
@@ -278,7 +336,7 @@ namespace Winform_PSXEmu
                     mnemonic += "look at next byte:";
                     break;
                 case 0xCD:
-                    mnemonic += "CALL a16[" + instBytes[1].ToString("X2") + instBytes[2].ToString("X2") + "]";
+                    mnemonic += string.Format("CALL a16[{0},{1}]", instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
                     PC += 3;
                     RAM[SP - 1] = (byte)(PC >> 8);
                     RAM[SP] = (byte)(PC);
@@ -309,6 +367,7 @@ namespace Winform_PSXEmu
                 case 0xFD:
                     {
                         Console.WriteLine("invalid instruction in switch for cpu:" + instBytes[0].ToString("X2") + " at location:" + PC.ToString("X4"));
+                        Console.WriteLine("Attemtping to advance PC by 1 to get back on track...");
                         PC += 1;
                         break;
                     }
@@ -431,12 +490,6 @@ namespace Winform_PSXEmu
         #region GeneralBitOps
         private Byte BitToggle(byte n, int p, int b) //n: original number, p: position of bit, b: bit value
         {
-            //F, in order of the toggle option
-            //7 = Zero Flag (z)
-            //6 = Subtract Flag (n)
-            //5 = Half-Carry (h)
-            //4 = Carry (c)
-            //rest of bits unused
             byte mask = (byte)(1 << p);
             return (byte)((n & ~mask) | ((b << p) & mask));
         }
@@ -455,4 +508,11 @@ namespace Winform_PSXEmu
             //http://www.folder101.com/Control/Notes/BitMasking/BitMasking.htm#Using%20XOR%20Masking
             //THIS IS THE ONLY THING THAT EXPLAINS XOR ON THE SAME REGISTER
             //basically zeroes out the accumulator(A register)
+            
+            //F, in order of the toggle option
+            //7 = Zero Flag (z)
+            //6 = Subtract Flag (n)
+            //5 = Half-Carry (h)
+            //4 = Carry (c)
+            //rest of bits unused
 */
