@@ -127,6 +127,7 @@ namespace Winform_PSXEmu
             {
                 case 0x05:
                     mnemonic += string.Format("WIP DEC B[{0}]", B.ToString("X2"));
+                    B = DEC(B);
                     PC += 1;
                     break;
                 case 0x06:
@@ -354,7 +355,10 @@ namespace Winform_PSXEmu
 
         private Byte DEC(Byte reg)
         {
+            byte oldreg = reg; //storing current reg to compare for H flag
+            reg--; //decrease reg
             //TODO: H - Set if no borrow from bit 4. ????
+            //check if bit 3 in number 2 is greater than bit3 in number 1?
             BitToggle(F, 6, 1); //set N
             if (reg == 0x00) //if reg = 0, toggle zero flag
             {
