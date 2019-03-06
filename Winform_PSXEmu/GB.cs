@@ -111,7 +111,7 @@ namespace Winform_PSXEmu
                     count++;
                     byte[] romBytes;
                     ReadROM(rom, out romBytes);
-                    Console.WriteLine("Count: " + count.ToString() + " | Status output: PC:" + PC.ToString("X2") + " | SP:" + SP.ToString("X2"));
+                    Console.WriteLine("Count: " + count.ToString() + " | Status output: PC:" + PC.ToString("X4") + " | SP:" + SP.ToString("X4"));
                     Console.WriteLine(string.Format("CPU Registers High: A:[{0}] | B:[{1}] | D:[{2}] | H:[{3}] | Low: F:[{4}] | C:[{5}] | E:[{6}] | L:[{7}]", 
                                      A.ToString("X2"), B.ToString("X2"), D.ToString("X2"), H.ToString("X2"), 
                                      F.ToString("X2"), C.ToString("X2"), E.ToString("X2"), L.ToString("X2")));
@@ -226,7 +226,7 @@ namespace Winform_PSXEmu
                     break;
                 case 0x0C:
 					mnemonic += string.Format("INC C[{0}]", C.ToString("X2"));
-					C = INC(C);
+					C = INC8(C);
                     PC++;
                     break;
                 case 0x0E:
@@ -252,7 +252,7 @@ namespace Winform_PSXEmu
                     PC++;
                     break;
                 case 0x20:
-                    mnemonic += string.Format("JR NZ, [{1},{2}]", instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
+                    mnemonic += string.Format("JR NZ, [{0},{1}]", instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
 					//TODO: Did this work originally??? Review Logging...
                     //mnemonic += "JR NZ, [" + instBytes[1].ToString("X4") + "]";
 					//TODO: debating shoving this in a method of its own or not, do want to but may need to work more in jump instructions before I do
@@ -275,6 +275,24 @@ namespace Winform_PSXEmu
 					H = LD8(H,instBytes[2]);
 					L = LD8(L,instBytes[1]);
                     PC += 3;
+                    break;
+                case 0x22:
+                    mnemonic += string.Format("LD (HL+[{0},{1}]), A[{2}]", H.ToString("X2"), L.ToString("X2"), A.ToString("X2"));
+                    //TODO: this also included in the make all HL memory writes their own method thing
+                    Reg16 = RegD16(H, L);
+                    LD8RAM(A, Reg16);
+                    Reg16++;
+                    H = (byte)(Reg16 >> 8);
+                    L = (byte)(Reg16);
+                    PC++;
+                    break;
+                case 0x23:
+                    mnemonic += string.Format("INC HL[{0},{1}]", H.ToString("X2"), L.ToString("X2"));
+                    Reg16 = RegD16(H, L);
+                    Reg16 = INC16(Reg16);
+                    H = (byte)(Reg16 >> 8);
+                    L = (byte)(Reg16);
+                    PC++;
                     break;
                 case 0x26:
 					mnemonic += string.Format("LD H[{0}], d8[{1}]", H.ToString("X2"), instBytes[1].ToString("X2"));
@@ -334,6 +352,11 @@ namespace Winform_PSXEmu
                     SP = Reg16;
                     SP -= 2;
                     PC++;
+                    break;
+                case 0xC9:
+                    mnemonic += string.Format("RET");
+                    PC = (UInt16)(RAM[SP+1] << 8 | RAM[SP]);
+                    SP += 2;
                     break;
                 case 0xCB:
                     mnemonic += "look at next byte:";
@@ -406,6 +429,8 @@ namespace Winform_PSXEmu
 
         private void DrawScreen()
         {
+            //RAM[0x8000]-RAM[0x9FFF] is the vram zone
+            //FE00h-FE9Fh: OAM-RAM (Holds display data for 40 objects)
             //registers SCR0LLX and SCR0LLY are where the upper left corner of the screen are 
             //on the 256,256 background screen buffer
             //https://realboyemulator.files.wordpress.com/2013/01/gbcpuman.pdf
@@ -453,7 +478,7 @@ namespace Winform_PSXEmu
             return reg;
         }
 		
-		private Byte INC(Byte Reg)
+		private Byte INC8(Byte Reg)
 		{
 			byte check = (byte)(F << 1);
             check = (byte)(check >> 7);
@@ -464,6 +489,11 @@ namespace Winform_PSXEmu
 			return Reg++;
 		}
 		
+        private UInt16 INC16(UInt16 reg16)
+        {
+            reg16++;
+            return reg16;
+        }
 		private Byte LD8(Byte Reg, Byte d8) 
 		{
 			return Reg = d8;
@@ -497,9 +527,9 @@ namespace Winform_PSXEmu
             return (byte)((n & ~mask) | ((b << p) & mask));
         }
 
-        private UInt16 RegD16(byte A, byte B)
+        private UInt16 RegD16(byte reg1, byte reg2)
         {
-            return (UInt16)(A << 8 | B);
+            return (UInt16)(reg1 << 8 | reg2);
         }
         #endregion
     }
