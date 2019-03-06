@@ -1,0 +1,9 @@
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\bin\Debug\Winform_PSXEmu.exe.config
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\bin\Debug\Winform_PSXEmu.exe
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\bin\Debug\Winform_PSXEmu.pdb
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\obj\Debug\Winform_PSXEmu.csprojResolveAssemblyReference.cache
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\obj\Debug\Winform_PSXEmu.Form1.resources
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\obj\Debug\Winform_PSXEmu.Properties.Resources.resources
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\obj\Debug\Winform_PSXEmu.csproj.GenerateResource.Cache
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\obj\Debug\Winform_PSXEmu.exe
+c:\Users\Michael\Documents\Visual Studio 2017\Projects\Winform_PSXEmu\Winform_PSXEmu\obj\Debug\Winform_PSXEmu.pdb
