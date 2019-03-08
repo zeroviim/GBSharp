@@ -230,6 +230,8 @@ namespace Winform_PSXEmu
                             PC += 2;
                             break;
                         case 1:
+                            //TODO: if it ends up true, it's supposed to just put NN as the PC, I believe this may be jumping wrong
+                            //see page 282 prog manual
                             SByte signedByte = (SByte)instBytes[1];
                             PC = (UInt16)(PC + 2 + signedByte);
                             mnemonic += string.Format(" True, jumping to: {0}", PC.ToString("X4"));
