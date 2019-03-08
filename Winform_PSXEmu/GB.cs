@@ -171,8 +171,9 @@ namespace Winform_PSXEmu
 					PC += 3;
 					break;
 				case 0x02:
-					mnemonic += string.Format("WIP LD (BC[{0},{1}),A{2}", B.ToString("X2"), C.ToString("X2"), A.ToString("X2"));
-					
+					mnemonic += string.Format("LD (BC[{0},{1}),A{2}", B.ToString("X2"), C.ToString("X2"), A.ToString("X2"));
+                    Reg16 = RegD16(B,C);
+					LD8RAM(A, Reg16);
 					PC++;
 					break;
                 case 0x05:
@@ -323,9 +324,9 @@ namespace Winform_PSXEmu
                 #region Cx
                 case 0xC1:
                     mnemonic += string.Format("POP BC[{0},{1}]", B.ToString("X2"), C.ToString("X2"));
-                    B = RAM[SP-1];
-                    C = RAM[SP-2];
-                    SP -= 2;
+                    B = RAM[SP+1];
+                    C = RAM[SP];
+                    SP += 2;
                     PC++;
                     break;
                 case 0xC3:
