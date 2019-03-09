@@ -185,8 +185,9 @@ namespace Winform_PSXEmu
 					PC += 3;
 					break;
 				case 0x02:
-					mnemonic += string.Format("WIP LD (BC[{0},{1}),A{2}", B.ToString("X2"), C.ToString("X2"), A.ToString("X2"));
-					
+					mnemonic += string.Format("LD (BC[{0},{1}),A{2}", B.ToString("X2"), C.ToString("X2"), A.ToString("X2"));
+                    Reg16 = RegD16(B,C);
+					LD8RAM(A, Reg16);
 					PC++;
 					break;
                 case 0x05:
@@ -243,6 +244,8 @@ namespace Winform_PSXEmu
                             PC += 2;
                             break;
                         case 1:
+                            //TODO: if it ends up true, it's supposed to just put NN as the PC, I believe this may be jumping wrong
+                            //see page 282 prog manual
                             SByte signedByte = (SByte)instBytes[1];
                             PC = (UInt16)(PC + 2 + signedByte);
                             mnemonic += string.Format(" True, jumping to: {0}", PC.ToString("X4"));
@@ -337,9 +340,9 @@ namespace Winform_PSXEmu
                 #region Cx
                 case 0xC1:
                     mnemonic += string.Format("POP BC[{0},{1}]", B.ToString("X2"), C.ToString("X2"));
-                    B = RAM[SP-1];
-                    C = RAM[SP-2];
-                    SP -= 2;
+                    B = RAM[SP+1];
+                    C = RAM[SP];
+                    SP += 2;
                     PC++;
                     break;
                 case 0xC3:
@@ -365,9 +368,7 @@ namespace Winform_PSXEmu
                     mnemonic += string.Format("CALL a16[{0},{1}]", instBytes[1].ToString("X2"), instBytes[2].ToString("X2"));
                     RAM[SP - 1] = (byte)(PC >> 8);
                     RAM[SP - 2] = (byte)(PC); //pg 283 gb prog manual
-                    //TODO: can probably take this out and just return it onto PC
-                    UInt16 newPC = RegD16(instBytes[2], instBytes[1]);
-                    PC = newPC;
+                    PC = RegD16(instBytes[2], instBytes[1]);
                     SP -= 2;
                     break;
                 #endregion
@@ -380,14 +381,14 @@ namespace Winform_PSXEmu
                     PC += 2;
                     break;
                 case 0xE2:
-                    mnemonic += "LD A[" + A.ToString("X2") + "], ($FF" + C.ToString("X2") + ")";
+                    mnemonic += string.Format("LD (C[{0},{1}]), A[{2}]", MemLoc.ToString("X2"), C.ToString("X2"), A.ToString("X2"));
                     RAM[MemLoc + C] = A;
                     PC++;
                     break;
                 #endregion
                 #region Fx
                 #endregion
-                #region Invalids
+                #region InvalidOperations
                 case 0xDB:
                 case 0xDD:
                 case 0xE3:
