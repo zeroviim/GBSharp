@@ -26,7 +26,7 @@ namespace Winform_PSXEmu
             //file picker saves location as string to pass to psx object
             string biosGBLocation = @"C:\Users\Michael\Documents\GB emulation development\bios\[BIOS] Nintendo Game Boy Boot ROM (World).gb";
             string unitTestCPULocation = @"C:\Users\Michael\Documents\GB emulation development\unit tests\cpu_instrs\cpu_instrs.gb";
-            GB.ReadBIOS(biosGBLocation);
+            //GB.ReadBIOS(biosGBLocation);
         }
 
         private void btn_Reset_Click(object sender, EventArgs e)
@@ -53,7 +53,18 @@ namespace Winform_PSXEmu
         private void button1_Click(object sender, EventArgs e)
         {
             string romLocation = @"C:\Users\Michael\Documents\GB emulation development\bios\[BIOS] Nintendo Game Boy Boot ROM (World).gb";
-            GB.StartEmu(romLocation);
+            Progress<string> lblA, lblB, lblD, lblH, lblF, lblC, lblE, lblL;
+            //high register reporting
+            lblA = new Progress<string>(s => lbl_A.Text = s);
+            lblB = new Progress<string>(s => lbl_B.Text = s);
+            lblD = new Progress<string>(s => lbl_D.Text = s);
+            lblH = new Progress<string>(s => lbl_H.Text = s);
+            //low register reporting
+            lblF = new Progress<string>(s => lbl_F.Text = s);
+            lblC = new Progress<string>(s => lbl_C.Text = s);
+            lblE = new Progress<string>(s => lbl_E.Text = s);
+            lblL = new Progress<string>(s => lbl_L.Text = s);
+            GB.StartEmu(romLocation, lblA, lblB, lblD, lblH, lblF, lblC, lblE, lblL);
         }
     }
 }

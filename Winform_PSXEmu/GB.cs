@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Drawing;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,10 +55,10 @@ namespace Winform_PSXEmu
         //TODO: string passing for this object is really bad, fix it.
         string romLocation = "";
 
-        public void StartEmu(string form1RomLocation)
+        public void StartEmu(string form1RomLocation, IProgress<string> lblA, IProgress<string> lblB, IProgress<string> lblD, IProgress<string> lblH, IProgress<string> lblF, IProgress<string> lblC, IProgress<string> lblE, IProgress<string> lblL)
         {
             romLocation = form1RomLocation;
-			taskMainLogic = new Task(()=> MainLogic(romLocation));
+			taskMainLogic = new Task(()=> MainLogic(romLocation, lblA, lblB, lblD, lblH, lblF, lblC, lblE, lblL));
 			if (taskMainLogic.Status == TaskStatus.Running)
 			{
 				loopEmu = true;
@@ -86,7 +88,10 @@ namespace Winform_PSXEmu
             loopEmu = false;
 			taskMainLogic.Wait();
 			Reinitialize();
-            StartEmu(romLocation);
+            //TODO: we have a headache here with this one, because we're gonna have to reassign the
+            //variables for progress reporting again, this logic may be tied to the
+            //front end instead by reinitializing the GB class object outright...
+            //StartEmu(romLocation);
             
         }
 
@@ -98,7 +103,7 @@ namespace Winform_PSXEmu
 			Reinitialize();
         }
 
-        private void MainLogic(string romLocation)
+        private void MainLogic(string romLocation, IProgress<string> lblA, IProgress<string> lblB, IProgress<string> lblD, IProgress<string> lblH, IProgress<string> lblF, IProgress<string> lblC, IProgress<string> lblE, IProgress<string> lblL)
         {
             //TODO: still need that timer control
             //TODO: vet this out and make sure it works as the report objects need to be dropped in here
@@ -111,11 +116,20 @@ namespace Winform_PSXEmu
                     count++;
                     byte[] romBytes;
                     ReadROM(rom, out romBytes);
-                    Console.WriteLine("Count: " + count.ToString() + " | Status output: PC:" + PC.ToString("X4") + " | SP:" + SP.ToString("X4"));
-                    Console.WriteLine(string.Format("CPU Registers High: A:[{0}] | B:[{1}] | D:[{2}] | H:[{3}] | Low: F:[{4}] | C:[{5}] | E:[{6}] | L:[{7}]", 
-                                     A.ToString("X2"), B.ToString("X2"), D.ToString("X2"), H.ToString("X2"), 
-                                     F.ToString("X2"), C.ToString("X2"), E.ToString("X2"), L.ToString("X2")));
                     Console.WriteLine(" ");
+                    Console.WriteLine("Count: " + count.ToString() + " | Status output: PC:" + PC.ToString("X4") + " | SP:" + SP.ToString("X4"));
+                    /*
+                    Console.WriteLine(string.Format("CPU Registers:"));
+                    Console.WriteLine(string.Format("High: A:[{0}] | B:[{1}] | D:[{2}] | H:[{3}]", A.ToString("X2"), B.ToString("X2"), D.ToString("X2"), H.ToString("X2")));
+                    Console.WriteLine(string.Format("Low: F:[{0}] | C:[{1}] | E:[{2}] | L:[{3}]", F.ToString("X2"), C.ToString("X2"), E.ToString("X2"), L.ToString("X2")));*/
+                    lblA.Report(string.Format("A:{0}", A.ToString("X2")));
+                    lblB.Report(string.Format("B:{0}", B.ToString("X2")));
+                    lblD.Report(string.Format("D:{0}", D.ToString("X2")));
+                    lblH.Report(string.Format("H:{0}", H.ToString("X2")));
+                    lblF.Report(string.Format("F:{0}", F.ToString("X2")));
+                    lblC.Report(string.Format("C:{0}", C.ToString("X2")));
+                    lblE.Report(string.Format("E:{0}", E.ToString("X2")));
+                    lblL.Report(string.Format("L:{0}", L.ToString("X2")));
                     CPUDecodeInst(romBytes);
                     //DrawScreen
                     //PlaySound
@@ -314,7 +328,7 @@ namespace Winform_PSXEmu
                 case 0xAF:
                     //TODO: Proper XOR
                     mnemonic += "XOR A";
-                    A = 0x0;
+                    A = (byte)(A ^ A);
                     PC++;
                     break;
                 #endregion
@@ -393,6 +407,7 @@ namespace Winform_PSXEmu
                 #endregion
                 default:
                     Console.WriteLine("Undefined byte in switch for cpu:" + instBytes[0].ToString("X2") + " at location:" + PC.ToString("X4"));
+                    MessageBox.Show("Undefinited hit");
                     PC += 1;
                     break;
             }
@@ -469,10 +484,10 @@ namespace Winform_PSXEmu
             //on the 256,256 background screen buffer
             //http://www.huderlem.com/demos/gameboy2bpp.html
             //http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-GPU-Timings
-            color px0 = new color(100,255,255,255); // white
-            color px1 = new color(100,192,192,192); //light grey
-            color px2 = new color(100,96,96,96); //dark grey
-            color px3 = new color(400,0,0,0); //black
+            Color px0 = Color.FromArgb(255,255,255); // white
+            Color px1 = Color.FromArgb(100,192,192,192); //light grey
+            Color px2 = Color.FromArgb(100,96,96,96); //dark grey
+            Color px3 = Color.FromArgb(0,0,0); //black
 
             //0xff40 = lcd and gpu control
                 //bit 0: BG | off/on
