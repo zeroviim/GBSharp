@@ -571,11 +571,19 @@ namespace Winform_PSXEmu
 		
 		private Byte INC8(Byte Reg)
 		{
+            if ((byte)(Reg & 0x0F) == 0x0F) //check if all lower nybble is full
+            {
+                BitToggle(F, 5, 1); // toggle H
+            }
 			byte check = (byte)(F << 1);
             check = (byte)(check >> 7);
             if (check == 1)
             {
-                F = (byte)(BitToggle(F, 6, 0));
+                F = (byte)(BitToggle(F, 6, 0)); //reset N
+            }
+            if (Reg++ == 0) //todo: make sure overflow from 0xff works with this
+            {
+                BitToggle(F, 7, 0);
             }
 			return Reg++;
 		}
@@ -606,6 +614,9 @@ namespace Winform_PSXEmu
             {
                 BitToggle(F, 7, 1);
             }
+            BitToggle(F, 6, 0); //reset N
+            BitToggle(F, 5, 0); //reset H
+            BitToggle(F, 4, oldMSB); //set C to oldMSB
             return Reg;
         }
         
